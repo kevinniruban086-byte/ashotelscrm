@@ -294,7 +294,7 @@ const USERS = [
 ].map((u, i) => ({...u, status: 'active', enrolled: 1, invited: false, last: new Date(Date.now() - (i + 1) * 3.1e6).toISOString()}));
 const audit = [];
 function log(actor, action, target, detail){ audit.push({seq: ++seq, ts: new Date().toISOString(), actor, action, target: target || '', detail: detail || '', ip: 'preview'}); }
-[['kevin.n@aitkenspence.lk','user.create','head.it@aitkenspence.lk','super_admin; all'],['kevin.n@aitkenspence.lk','user.create','nimali@aitkenspence.lk','editor; Sri Lanka'],['kevin.n@aitkenspence.lk','user.create','aishath@aitkenspence.lk','editor; Maldives'],['nimali@aitkenspence.lk','login.ok','',''],['nimali@aitkenspence.lk','data.load','','124 people, 9 hotels'],['aishath@aitkenspence.lk','login.fail','','wrong code'],['aishath@aitkenspence.lk','login.ok','',''],['aishath@aitkenspence.lk','person.update','MLD-0003','fields: designation'],['zoona@aitkenspence.lk','login.ok','',''],['nimali@aitkenspence.lk','export','people','124 records viewed for export']].forEach(a => log(...a));
+[['kevin.n@aitkenspence.lk','user.create','head.it@aitkenspence.lk','super_admin; all'],['kevin.n@aitkenspence.lk','user.create','nimali@aitkenspence.lk','editor; Sri Lanka'],['kevin.n@aitkenspence.lk','user.create','aishath@aitkenspence.lk','editor; Maldives'],['nimali@aitkenspence.lk','login.ok','',''],['nimali@aitkenspence.lk','data.load','','124 people, 9 hotels'],['aishath@aitkenspence.lk','login.fail','','wrong code'],['aishath@aitkenspence.lk','login.ok','',''],['aishath@aitkenspence.lk','person.update','MLD-0003','fields: desig'],['zoona@aitkenspence.lk','login.ok','',''],['nimali@aitkenspence.lk','export','people','124 records viewed for export']].forEach(a => log(...a));
 const E = (s, m) => { const e = new Error(m); e.status = s; return e; };
 const canWrite = u => u.role !== 'viewer';
 const allCountries = () => [...new Set(SEED.hotels.map(h => h.country))];
@@ -362,7 +362,7 @@ function importPeople(u, b){
   out.sort((a, b) => a.row - b.row);
   const res = {mode, committed: false, counts, rows: out}; if (!commit) return res;
   const saved = [];
-  todo.forEach(t => { if (t.st === 'new'){ t.p.upd = today(); t.p.updBy = u.name; people.push(t.p); } else { const old = people.find(x => x.id === t.p.id); Object.keys(old).forEach(k => delete old[k]); Object.assign(old, t.p); } saved.push(clone(t.p)); });
+  todo.forEach(t => { if (t.st === 'new'){ t.p.upd = today(); t.p.updBy = u.name; people.push(t.p); log(u.email, 'person.create', t.p.id, t.p.hotel + '; via Excel import'); } else { const old = people.find(x => x.id === t.p.id), ch = diff(old, t.p); Object.keys(old).forEach(k => delete old[k]); Object.assign(old, t.p); log(u.email, 'person.update', t.p.id, 'fields: ' + ch.join(', ') + '; via Excel import'); } saved.push(clone(t.p)); });
   log(u.email, 'people.import', '', counts.new + ' added, ' + counts.update + ' updated, ' + (counts.same + counts.exists) + ' unchanged, ' + counts.outside + ' outside access, ' + counts.error + ' with errors; ' + (mode === 'add' ? 'add only' : 'add and update'));
   res.committed = true; res.people = saved; return res;
 }
@@ -432,7 +432,13 @@ function handle(m, path, b, q){
       if (b.role) t.role = b.role; if (b.status) t.status = b.status; if (b.name) t.name = b.name; if (Array.isArray(b.countries)) t.countries = t.role === 'super_admin' ? [] : b.countries; if (t.role !== 'super_admin' && !t.countries.length) throw E(400, 'Choose at least one country.');
       log(me.email, 'user.update', t.email, 'role ' + t.role + '; status ' + t.status + '; access ' + (t.countries.join(', ') || 'all')); return {user: adm(t)}; }
   }
-  if (m === 'GET' && path === '/api/admin/audit'){ admin(); const lim = +q.get('limit') || 100, off = +q.get('offset') || 0, rows = audit.slice().reverse(); return {rows: rows.slice(off, off + lim), total: rows.length}; }
+  if (m === 'GET' && path === '/api/admin/audit'){ admin(); const lim = +q.get('limit') || 100, off = +q.get('offset') || 0, term = String(q.get('q') || '').trim().toLowerCase(), nm = e => (USERS.find(x => x.email === e) || {}).name || '';
+    const rows = audit.slice().reverse().filter(r => !term || [r.actor, r.action, r.target, r.detail].some(v => String(v).toLowerCase().includes(term))); return {rows: rows.slice(off, off + lim).map(r => ({...r, name: nm(r.actor)})), total: rows.length}; }
+  if (m === 'GET' && (r = /^\/api\/people\/([A-Za-z0-9-]+)\/history$/.exec(path))){
+    const u = need(), id = r[1].toUpperCase(), rec = people.find(x => x.id === id); if (!rec || !scope(u).has(rec.hotel)) throw E(404, 'Not found.');
+    const nm = e => (USERS.find(x => x.email === e) || {}).name || e;
+    return {id, rows: audit.slice().reverse().filter(x => (x.target === id && /^person\.(create|update)$/.test(x.action)) || (x.target === 'person:' + id && x.action === 'note.add')).slice(0, 200).map(x => ({seq: x.seq, ts: x.ts, by: nm(x.actor), email: x.actor, action: x.action, detail: x.detail}))};
+  }
   if (m === 'GET' && path === '/api/admin/audit/verify'){ const u = admin(); log(u.email, 'audit.verify', '', 'ok'); return {ok: true, checked: audit.length}; }
   throw E(404, 'Not found.');
 }
@@ -675,6 +681,16 @@ pos.forEach(p => {
 const NOTES = DATA.notes || {};
 const loadNotes = () => NOTES;
 const pad2 = n => String(n).padStart(2, '0');
+const fmtAtS = iso => { const d = new Date(iso); return fmtAt(iso) + ':' + pad2(d.getSeconds()); };   // with seconds, in this computer's time zone
+const FIELD = {name: 'Name', dept: 'Department', desig: 'Designation', nat: 'Nationality', title: 'Corporate title', cadre: 'Cadre', type: 'Employment type', gender: 'Gender', ageBand: 'Age band', doj: 'Date of joining', svc: 'Service band', trHrs: 'Training hours', trainDone: 'Training completed', mgr: 'Reporting manager', hod: 'Head of department', status: 'Status', remarks: 'Remarks', probation: 'Probation', exitType: 'Exit type', exitReason: 'Exit reason', doe: 'Date of exit', email: 'Email'};
+const ACTION = {'login.ok': 'Signed in', 'login.fail': 'Failed sign-in', 'login.blocked': 'Sign-in blocked (locked)', logout: 'Signed out', 'data.load': 'Opened the CRM', 'person.create': 'Added employee', 'person.update': 'Edited employee', 'person.delete': 'Deleted employee', 'note.add': 'Added a note', export: 'Exported employees', 'people.import': 'Excel import (summary)', 'user.create': 'Added user', 'user.update': 'Changed user access', 'user.reset': 'Reset user access', 'account.setup': 'Completed set-up', 'account.locked': 'Account locked', 'password.change': 'Changed password', 'password.change_fail': 'Password change failed', 'audit.verify': 'Verified the audit log', 'setup.invite_revoked': 'Set-up link revoked'};
+function changeText(action, detail){   // plain wording for what happened to an employee record
+  const imp = /via Excel import/.test(detail || '') ? ' (Excel import)' : '';
+  if (action === 'person.create') return 'Added' + imp;
+  if (action === 'note.add') return 'Added a note';
+  if (action === 'person.update'){ const m = /fields: ([^;]*)/.exec(detail || ''), f = m ? m[1].trim() : ''; return (!f || f === 'none') ? 'Saved, nothing changed' + imp : 'Changed ' + f.split(', ').map(k => FIELD[k] || k).join(', ') + imp; }
+  return detail || '';
+}
 const fmtAt = iso => { const d = new Date(iso); return pad2(d.getDate()) + ' ' + MON[d.getMonth()] + ' ' + d.getFullYear() + ', ' + pad2(d.getHours()) + ':' + pad2(d.getMinutes()); };
 
 const VIEWS = [['overview','Overview'], ['hotels','Hotels'], ['people','People'], ['hiring','Hiring'], ['exits','Exits'], ['gaps','Data gaps']];
@@ -998,6 +1014,13 @@ function notesBlock(key){
   <label for="nt" style="position:absolute;left:-9999px">New note<\/label><textarea id="nt" placeholder="Write a note"><\/textarea>
   <p style="margin:8px 0 0"><button class="btn" id="nadd" data-key="${esc(key)}">Save note<\/button><\/p>`;
 }
+function historyBlock(id){
+  api('GET', '/api/people/' + encodeURIComponent(id) + '/history').then(r => {
+    const box = $('#hist'); if (!box) return;
+    box.innerHTML = r.rows.length ? r.rows.map(x => `<div class="note"><time>${esc(fmtAtS(x.ts))} · ${esc(x.by)}<\/time>${esc(changeText(x.action, x.detail))}<\/div>`).join('') + '<p class="hint">Times are in this computer\'s time zone. Only the names of fields are kept, not the old and new values.<\/p>' : '<p class="hint">No changes recorded for this employee yet.<\/p>';
+  }, () => { const box = $('#hist'); if (box) box.innerHTML = '<p class="hint">History could not be loaded.<\/p>'; });
+  return `<h2 style="font-size:17px;margin-top:20px">History<\/h2><div id="hist"><p class="hint">Loading...<\/p><\/div>`;
+}
 function openDrawer(type, id){
   let html = '', key = type + ':' + id;
   if (type === 'person'){
@@ -1005,7 +1028,7 @@ function openDrawer(type, id){
     html = `<div class="drawer-head"><button class="btn ghost" data-close>Close<\/button><span class="actions"><button class="btn ghost" data-act="edit:${p.id}">Edit<\/button><button class="btn ghost" data-act="remove:${p.id}">Remove<\/button><\/span><\/div><h2>${esc(p.name)}<\/h2><p class="sub">${esc(p.desig)}, ${esc(p.hotelName)}<\/p><p>${statusTag(p)}<\/p>
     <dl class="kv">${row('Employee ID', p.id)}${row('Department', esc(p.dept))}${row('Title', esc(p.title))}${row('Cadre', p.cadre)}${row('Employment', p.type)}${row('Joined', fmtD(p.doj) + ` (${p.tenure.toFixed(1)} years)`)}${row('Nationality', esc(p.nat))}${row('Gender', p.gender)}
     ${row('Training', `${p.trHrs} hours, ${p.trainDone === 'Yes' ? 'completed' : 'not completed'}`)}${row('Reports to', esc(p.mgr))}${row('Head of department', esc(p.hod))}${row('Email', esc(p.email))}${row('Date of exit', p.active ? '' : (p.doe ? fmtD(p.doe) : 'Not recorded'))}${row('Exit type', esc(p.exitType))}${row('Exit reason', esc(p.exitReason))}${row('Remarks', esc(p.remarks))}${row('Last updated', fmtD(p.upd) + ' by ' + esc(p.updBy))}<\/dl>
-    <button class="btn ghost" data-go="hotel" data-arg="${p.hotel}">Open ${esc(p.hotelName)}<\/button>${notesBlock(key)}`;
+    <button class="btn ghost" data-go="hotel" data-arg="${p.hotel}">Open ${esc(p.hotelName)}<\/button>${historyBlock(p.id)}${notesBlock(key)}`;
   } else if (type === 'pos'){
     const p = pos.find(x => x.id === id); if (!p) return;
     html = `<button class="btn ghost" data-close>Close<\/button><h2>${esc(p.job)}<\/h2><p class="sub">${esc(hotelBy[p.hotel].name)}, ${esc(p.dept)}<\/p><p><span class="tag ${p.filled ? 'good' : p.overdue ? 'warn' : 'plain'}">${p.stage}<\/span><\/p>
@@ -1260,14 +1283,18 @@ function pwPanel(){
   <p style="margin:14px 0 0"><button class="btn" type="submit">Change password<\/button><\/p><\/form>`);
 }
 $('#chpw').addEventListener('click', pwPanel);
-let AUD = {off: 0};
+let AUD = {off: 0, q: ''};
 async function auditView(){
   main.innerHTML = head('Audit log', 'Loading...') + '';
-  let r; try { r = await api('GET', '/api/admin/audit?limit=100&offset=' + AUD.off); } catch (e) { main.innerHTML += '<p class="err" style="display:block">' + esc(e.message) + '<\/p>'; return; }
+  let r; try { r = await api('GET', '/api/admin/audit?limit=100&offset=' + AUD.off + (AUD.q ? '&q=' + encodeURIComponent(AUD.q) : '')); } catch (e) { main.innerHTML += '<p class="err" style="display:block">' + esc(e.message) + '<\/p>'; return; }
   const bad = a => /fail|locked|blocked|delete|reset|revoked/.test(a) ? ' style="color:var(--bad);font-weight:600"' : '';
-  main.innerHTML = head('Audit log', `Every sign-in, data load, change, export and admin action. ${r.total} entries. Entries are chained, so editing or deleting one is detected. Showing ${AUD.off + 1} to ${Math.min(AUD.off + 100, r.total)}, newest first.`, '<div class="actions"><button class="btn" id="averify">Verify integrity<\/button><\/div>') + `<p class="hint" id="avmsg" role="status"><\/p>
-  <div class="tablewrap" style="max-height:none"><table class="ledger"><thead><tr><th>#<\/th><th>Time<\/th><th>User<\/th><th>Action<\/th><th>Target<\/th><th>Detail<\/th><th>Address<\/th><\/tr><\/thead><tbody>${r.rows.map(x => `<tr><td>${x.seq}<\/td><td style="white-space:nowrap">${esc(fmtAt(x.ts))}<\/td><td>${esc(x.actor)}<\/td><td${bad(x.action)}>${esc(x.action)}<\/td><td>${esc(x.target)}<\/td><td>${esc(x.detail)}<\/td><td>${esc(x.ip)}<\/td><\/tr>`).join('')}<\/tbody><\/table><\/div>
+  main.innerHTML = head('Audit log', `Who did what, and when. Every sign-in, data load, change, export and admin action. ${r.total} ${AUD.q ? 'matching ' : ''}entries, newest first${r.total ? ', showing ' + (AUD.off + 1) + ' to ' + Math.min(AUD.off + 100, r.total) : ''}. Entries are chained, so editing or deleting one is detected. Times are in this computer's time zone.`, '<div class="actions"><button class="btn" id="averify">Verify integrity<\/button><\/div>') + `<p class="hint" id="avmsg" role="status"><\/p>
+  <form class="filters" id="aform" role="search"><input type="search" id="aq" placeholder="Search a person, employee ID, action or detail" value="${esc(AUD.q)}" aria-label="Search the audit log" style="width:320px"><button class="btn" type="submit">Search<\/button>
+  <button class="btn ghost" type="button" data-aq="person.">Employee changes<\/button><button class="btn ghost" type="button" data-aq="login">Sign-ins<\/button><button class="btn ghost" type="button" data-aq="user.">User changes<\/button><button class="btn ghost" type="button" data-aq="">Show all<\/button><\/form>
+  <div class="tablewrap" style="max-height:none"><table class="ledger"><thead><tr><th>#<\/th><th>Date and time<\/th><th>Who<\/th><th>What happened<\/th><th>Employee or item<\/th><th>What changed<\/th><th>Address<\/th><\/tr><\/thead><tbody>${r.rows.map(x => `<tr><td>${x.seq}<\/td><td style="white-space:nowrap">${esc(fmtAtS(x.ts))}<\/td><td>${x.name ? '<b>' + esc(x.name) + '<\/b><div class="hint" style="margin:0">' + esc(x.actor) + '<\/div>' : esc(x.actor)}<\/td><td${bad(x.action)}>${esc(ACTION[x.action] || x.action)}<div class="hint" style="margin:0">${esc(x.action)}<\/div><\/td><td>${esc(x.target)}<\/td><td>${esc(/^(person|note)\./.test(x.action) ? changeText(x.action, x.detail) : x.detail)}<\/td><td>${esc(x.ip)}<\/td><\/tr>`).join('') || '<tr><td colspan="7" class="empty">No entries match.<\/td><\/tr>'}<\/tbody><\/table><\/div>
   <p style="margin-top:12px" class="actions">${AUD.off > 0 ? '<button class="btn ghost" id="anewer">Newer<\/button>' : ''}${AUD.off + 100 < r.total ? '<button class="btn ghost" id="aolder">Older<\/button>' : ''}<\/p>`;
+  $('#aform').addEventListener('submit', e => { e.preventDefault(); AUD.q = $('#aq').value.trim(); AUD.off = 0; auditView(); });
+  document.querySelectorAll('[data-aq]').forEach(b => b.addEventListener('click', () => { AUD.q = b.dataset.aq; AUD.off = 0; auditView(); }));
 }
 
 // ---------- Events
