@@ -926,11 +926,11 @@ function overview(){
       return `<tr class="click" tabindex="0" ${goAttr(nv('people', {dept: d, status: 'Active'}))}><td>${esc(d)}<\/td><td class="num">${a.length}<\/td><td class="num">${a.filter(p => p.cadre === 'Executive').length}<\/td><td class="num">${a.filter(p => p.cadre === 'Non-Executive').length}<\/td><td class="num">${a.filter(p => p.cadre === 'Trainee').length}<\/td><td class="num">${women(a)}<\/td><td class="num">${wpct(a)}<\/td>${CANSEE ? `<td class="num">${m('engage')}<\/td><td class="num">${m('perf')}<\/td>` : ''}<\/tr>`; }).join('')}<\/tbody><\/table><\/div>` : '<p class="empty">No active employees for this selection.<\/p>';
   const withFig = hs.filter(h => figBy[h.code] && (figBy[h.code].rooms !== '' || figBy[h.code].revenue !== ''));
   const ratio = (a, b) => (a !== '' && a != null && b) ? a / b : null;
-  const ratioTable = withFig.length ? `<div class="pbscroll" style="max-height:300px"><table class="ledger pbt"><thead><tr><th>HotelName<\/th><th class="num">Rooms<\/th><th class="num">Active Employees<\/th><th class="num" title="Rooms divided by active employees">Rooms per employee<\/th><th class="num">Revenue (USD)<\/th><th class="num" title="Revenue divided by active employees">Revenue per employee (USD)<\/th><\/tr><\/thead><tbody>
-    ${hs.map(h => { const g = figBy[h.code] || {}, n = act.filter(p => p.hotel === h.code).length, rp = ratio(g.rooms, n), vp = ratio(g.revenue, n);
-      return `<tr class="click" tabindex="0" data-go="hotel" data-arg="${h.code}"><td>${esc(h.name)}<\/td><td class="num">${g.rooms !== '' && g.rooms != null ? g.rooms : '–'}<\/td><td class="num">${n}<\/td><td class="num">${rp == null ? '–' : rp.toFixed(2)}<\/td><td class="num">${g.revenue !== '' && g.revenue != null ? money(g.revenue) : '–'}<\/td><td class="num">${vp == null ? '–' : money(vp)}<\/td><\/tr>`; }).join('')}<\/tbody>
+  const ratioTable = withFig.length ? `<div class="pbscroll" style="max-height:300px"><table class="ledger pbt"><thead><tr><th>HotelName<\/th><th class="num">Rooms<\/th><th class="num">Active Employees<\/th><th class="num">Revenue (USD)<\/th><th class="num" title="Revenue divided by active employees">Revenue per employee (USD)<\/th><\/tr><\/thead><tbody>
+    ${hs.map(h => { const g = figBy[h.code] || {}, n = act.filter(p => p.hotel === h.code).length, vp = ratio(g.revenue, n);
+      return `<tr class="click" tabindex="0" data-go="hotel" data-arg="${h.code}"><td>${esc(h.name)}<\/td><td class="num">${g.rooms !== '' && g.rooms != null ? g.rooms : '–'}<\/td><td class="num">${n}<\/td><td class="num">${g.revenue !== '' && g.revenue != null ? money(g.revenue) : '–'}<\/td><td class="num">${vp == null ? '–' : money(vp)}<\/td><\/tr>`; }).join('')}<\/tbody>
     ${(() => { const rr = withFig.filter(h => figBy[h.code].rooms !== ''), vv = withFig.filter(h => figBy[h.code].revenue !== ''), nr = rr.reduce((a, h) => a + act.filter(p => p.hotel === h.code).length, 0), nv2 = vv.reduce((a, h) => a + act.filter(p => p.hotel === h.code).length, 0), sr = rr.reduce((a, h) => a + figBy[h.code].rooms, 0), sv = vv.reduce((a, h) => a + figBy[h.code].revenue, 0);
-      return `<tfoot><tr><td>Total (hotels with figures)<\/td><td class="num">${rr.length ? sr : '–'}<\/td><td class="num">${act.length}<\/td><td class="num">${nr ? (sr / nr).toFixed(2) : '–'}<\/td><td class="num">${vv.length ? money(sv) : '–'}<\/td><td class="num">${nv2 ? money(sv / nv2) : '–'}<\/td><\/tr><\/tfoot>`; })()}<\/table><\/div>`
+      return `<tfoot><tr><td>Total (hotels with figures)<\/td><td class="num">${rr.length ? sr : '–'}<\/td><td class="num">${act.length}<\/td><td class="num">${vv.length ? money(sv) : '–'}<\/td><td class="num">${nv2 ? money(sv / nv2) : '–'}<\/td><\/tr><\/tfoot>`; })()}<\/table><\/div>`
     : `<p class="empty">No rooms or revenue entered yet.${ME.role === 'super_admin' ? ' Open a hotel and choose Edit figures.' : ' A super admin adds them on each hotel page.'}<\/p>`;
   const jobs = ps.slice().sort((a, b) => a.job.localeCompare(b.job) || hotelBy[a.hotel].name.localeCompare(hotelBy[b.hotel].name));
   const jobTable = `<div class="pbscroll" style="max-height:300px"><table class="ledger pbt"><thead><tr><th>JobTitle<\/th><th>HotelName<\/th><th>Status<\/th><\/tr><\/thead><tbody>
@@ -953,7 +953,7 @@ function overview(){
     ${IS_SUPER ? '<div id="planStrip" class="span2" hidden><\/div>' : ''}
     ${pbCard('Hotels', 'active employees by hotel. Select a row to open the hotel.', hotelTable, 'span2')}
     ${pbCard('Departments', 'active employees by department, with the number of women. Select a row to see them.', deptTable, 'span2')}
-    ${pbCard('Rooms and revenue per employee', 'by hotel. Rooms and revenue are entered by a super admin on the hotel page.', ratioTable, 'span2')}
+    ${pbCard('Revenue per employee', 'by hotel. Rooms and revenue are entered by a super admin on the hotel page.', ratioTable, 'span2')}
     ${pbCard('Recruitment jobs', '', jobTable)}
     ${pbCard(`Employees <button class="btn pbadd" data-act="add">Add employee<\/button>`, `${empRows.length} ${empRows.length === 1 ? 'record' : 'records'}. Select a row to view, edit or remove.`, empTable)}
   <\/div>
@@ -1089,15 +1089,15 @@ function hotelView(code){
 }
 function hotelFigBlock(code, s){
   const g = figBy[code], has = g && (g.rooms !== '' || g.revenue !== ''), n = s.active;
-  const rp = has && g.rooms !== '' && n ? (g.rooms / n).toFixed(2) : '–', vp = has && g.revenue !== '' && n ? money(g.revenue / n) : '–';
+  const vp = has && g.revenue !== '' && n ? money(g.revenue / n) : '–';
   return `<section class="block"><h2>Rooms and revenue ${ME.role === 'super_admin' ? '<button class="btn ghost" data-figs="' + code + '" style="margin-left:10px">Edit figures<\/button>' : ''}<\/h2>
-  ${has ? `<div class="figs"><div class="fig"><div class="v">${g.rooms !== '' ? g.rooms : '–'}<\/div><div class="l">Rooms<\/div><div class="d">${rp} rooms per employee<\/div><\/div>
+  ${has ? `<div class="figs"><div class="fig"><div class="v">${g.rooms !== '' ? g.rooms : '–'}<\/div><div class="l">Rooms<\/div><div class="d">in the hotel<\/div><\/div>
     <div class="fig"><div class="v">${g.revenue !== '' ? money(g.revenue) : '–'}<\/div><div class="l">Revenue (USD)<\/div><div class="d">${g.period ? esc(g.period) : 'period not set'}<\/div><\/div>
     <div class="fig"><div class="v">${vp}<\/div><div class="l">Revenue per employee (USD)<\/div><div class="d">on ${n} active employees<\/div><\/div><\/div>` : `<p class="hint">No rooms or revenue entered for this hotel yet.<\/p>`}<\/section>`;
 }
 function figsForm(code){
   const g = figBy[code] || {rooms: '', revenue: '', period: ''}, h = hotelBy[code];
-  $('#drawer').innerHTML = `<div class="drawer-head"><button class="btn ghost" data-close>Cancel<\/button><\/div><h2>Figures for ${esc(h.name)}<\/h2><p class="sub">Used for rooms per employee and revenue per employee.<\/p>
+  $('#drawer').innerHTML = `<div class="drawer-head"><button class="btn ghost" data-close>Cancel<\/button><\/div><h2>Figures for ${esc(h.name)}<\/h2><p class="sub">Used for revenue per employee.<\/p>
   <form id="figform" data-code="${code}" novalidate><div id="ferr" class="err" role="alert"><\/div>
    ${field('Rooms', `<input id="g_rooms" type="number" min="0" step="1" value="${esc(g.rooms)}">`, 'g_rooms')}
    ${field('Annual revenue (USD)', `<input id="g_rev" type="number" min="0" step="1" value="${esc(g.revenue)}">`, 'g_rev')}
