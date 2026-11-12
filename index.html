@@ -299,6 +299,8 @@ svg.pl{width:100%;height:auto;display:block}
 .hctry{font:inherit;font-size:15px;color:var(--ink);background:var(--surf);border:1px solid var(--line);border-radius:6px;padding:3px 8px;cursor:pointer}
 @media (max-width:600px){.hname{font-size:20px}}
 
+.fig .l.fhead{margin:0 0 4px;font-size:15px}
+
 </style>
 </head>
 <body>
@@ -1124,7 +1126,7 @@ function hotelView(code){
     <button class="btn ghost" data-note="hotel:${h.code}">Notes<\/button><\/div>` + `
   <div class="figs">
     <div class="fig"><div class="v">${s.total}<\/div><div class="l">Staff<\/div><div class="d">${s.active} active, ${s.total - s.active} inactive<\/div><\/div>
-    <div class="fig"><div class="v">${s.exec}<\/div><div class="l">Executive<\/div><div class="d">${s.non} non-executive, ${s.trn} trainee<\/div><\/div>
+    <div class="fig"><div class="l fhead">Executives<\/div><div class="v">${s.exec}<\/div><div class="d">${s.non} non-executive, ${s.trn} trainee<\/div><\/div>
     <div class="fig"><div class="v">${s.women}<\/div><div class="l">Female<\/div><div class="d">${s.female}% of headcount<\/div><\/div>
     <div class="fig"><div class="v">${s.men}<\/div><div class="l">Male<\/div><div class="d">${s.male}% of headcount<\/div><\/div>
     <div class="fig"><div class="v">${s.tenure.toFixed(1)}<\/div><div class="l">Years of service<\/div><div class="d">average<\/div><\/div>
