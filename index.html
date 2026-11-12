@@ -1125,13 +1125,13 @@ function hotelView(code){
     <div class="hsub"><select id="hCountry" class="hctry" aria-label="Country">${countries.map(c => `<option ${c === h.country ? 'selected' : ''}>${esc(c)}<\/option>`).join('')}<\/select><span>, code ${h.code}<\/span><\/div><\/div>
     <button class="btn ghost" data-note="hotel:${h.code}">Notes<\/button><\/div>` + `
   <div class="figs">
-    <div class="fig"><div class="v">${s.total}<\/div><div class="l">Staff<\/div><div class="d">${s.active} active, ${s.total - s.active} inactive<\/div><\/div>
-    <div class="fig"><div class="l fhead">Executives<\/div><div class="v">${s.exec}<\/div><div class="d">${s.non} non-executive, ${s.trn} trainee<\/div><\/div>
-    <div class="fig"><div class="v">${s.women}<\/div><div class="l">Female<\/div><div class="d">${s.female}% of headcount<\/div><\/div>
-    <div class="fig"><div class="v">${s.men}<\/div><div class="l">Male<\/div><div class="d">${s.male}% of headcount<\/div><\/div>
-    <div class="fig"><div class="v">${s.tenure.toFixed(1)}<\/div><div class="l">Years of service<\/div><div class="d">average<\/div><\/div>
-    <div class="fig"><div class="v">${op.filter(p => !p.filled).length}<\/div><div class="l">Open roles<\/div><div class="d">${op.length} ${op.length === 1 ? 'requisition' : 'requisitions'} in total<\/div><\/div>
-    <div class="fig"><div class="v">${ex.length}<\/div><div class="l">Attrition interviews<\/div><div class="d">Oct 2025 to Sep 2026<\/div><\/div>
+    <div class="fig"><div class="l fhead">Staff<\/div><div class="v">${s.total}<\/div><div class="d">${s.active} active, ${s.total - s.active} inactive<\/div><\/div>
+    <div class="fig"><div class="l fhead">Executives<\/div><div class="v">${s.exec}<\/div><div class="d">${s.exec} executive, ${s.non} non-executive, ${s.trn} trainee<\/div><\/div>
+    <div class="fig"><div class="l fhead">Female<\/div><div class="v">${s.women}<\/div><div class="d">${s.female}% of headcount<\/div><\/div>
+    <div class="fig"><div class="l fhead">Male<\/div><div class="v">${s.men}<\/div><div class="d">${s.male}% of headcount<\/div><\/div>
+    <div class="fig"><div class="l fhead">Years of service<\/div><div class="v">${s.tenure.toFixed(1)}<\/div><div class="d">average<\/div><\/div>
+    <div class="fig"><div class="l fhead">Open roles<\/div><div class="v">${op.filter(p => !p.filled).length}<\/div><div class="d">${op.length} ${op.length === 1 ? 'requisition' : 'requisitions'} in total<\/div><\/div>
+    <div class="fig"><div class="l fhead">Attrition interviews<\/div><div class="v">${ex.length}<\/div><div class="d">Oct 2025 to Sep 2026<\/div><\/div>
   <\/div>
   ${hotelFigBlock(code, s)}
   <section class="block"><h2>Staff<\/h2><div class="tablewrap" style="max-height:44vh"><table class="ledger"><thead><tr><th>ID<\/th><th>Name<\/th><th>Designation<\/th><th>Department<\/th><th>Cadre<\/th><th>Joined<\/th><th>Status<\/th><\/tr><\/thead><tbody>
@@ -1146,10 +1146,10 @@ function hotelFigBlock(code, s){
   const g = figBy[code], has = g && (g.rooms !== '' || g.revenue !== ''), n = s.active;
   const vp = has && g.revenue !== '' && n ? money(g.revenue / n) : '–', er = has && g.rooms !== '' && +g.rooms > 0 ? (n / g.rooms).toFixed(2) : '–';
   return `<section class="block"><h2>Rooms and revenue ${ME.role === 'super_admin' ? '<button class="btn ghost" data-figs="' + code + '" style="margin-left:10px">Edit figures<\/button>' : ''}<\/h2>
-  ${has ? `<div class="figs"><div class="fig"><div class="v">${g.rooms !== '' ? g.rooms : '–'}<\/div><div class="l">Rooms<\/div><div class="d">in the hotel<\/div><\/div>
-    <div class="fig"><div class="v">${er}<\/div><div class="l">Employees per room<\/div><div class="d">${n} active employees<\/div><\/div>
-    <div class="fig"><div class="v">${g.revenue !== '' ? money(g.revenue) : '–'}<\/div><div class="l">Revenue (USD)<\/div><div class="d">${g.period ? esc(g.period) : 'period not set'}<\/div><\/div>
-    <div class="fig"><div class="v">${vp}<\/div><div class="l">Revenue per employee (USD)<\/div><div class="d">on ${n} active employees<\/div><\/div><\/div>` : `<p class="hint">No rooms or revenue entered for this hotel yet.<\/p>`}<\/section>
+  ${has ? `<div class="figs"><div class="fig"><div class="l fhead">Rooms<\/div><div class="v">${g.rooms !== '' ? g.rooms : '–'}<\/div><div class="d">in the hotel<\/div><\/div>
+    <div class="fig"><div class="l fhead">Employees per room<\/div><div class="v">${er}<\/div><div class="d">${n} active employees<\/div><\/div>
+    <div class="fig"><div class="l fhead">Revenue (USD)<\/div><div class="v">${g.revenue !== '' ? money(g.revenue) : '–'}<\/div><div class="d">${g.period ? esc(g.period) : 'period not set'}<\/div><\/div>
+    <div class="fig"><div class="l fhead">Revenue per employee (USD)<\/div><div class="v">${vp}<\/div><div class="d">on ${n} active employees<\/div><\/div><\/div>` : `<p class="hint">No rooms or revenue entered for this hotel yet.<\/p>`}<\/section>
   <section class="block"><h2>HR KPIs<\/h2>${hrKpiTable([code], (v, x) => navAttr(v, {hotel: code, ...(x || {})}))}<\/section>`;
 }
 function figsForm(code){
