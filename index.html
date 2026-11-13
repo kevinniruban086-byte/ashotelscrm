@@ -349,6 +349,12 @@ svg.pl{width:100%;height:auto;display:block}
 .pbadge{font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--p3);font-weight:700}
 .pmini .preach{font-size:11.5px;margin-top:2px}.pmini .preach b{font-size:13px}.pmini .preach>span:last-child:not(.pbadge){display:none}
 
+.ptbar{position:relative;margin-top:16px}
+.tpin{position:absolute;bottom:100%;margin-bottom:1px;transform:translateX(-50%);fill:var(--p3);pointer-events:none}
+.tpin circle{fill:var(--surf)}
+.tpin.end{transform:translateX(-85%)}
+.ptarget .preach{margin-top:5px}
+
 </style>
 </head>
 <body>
@@ -1175,8 +1181,10 @@ function planBlock(b){
 const planTabs = (P, cur) => `<nav class="ptabs" aria-label="Plan sections">${[['overview', 'Overview'], ...P.sections.map(s => [s.id, s.title])].map(([id, t]) => `<button class="${id === cur ? 'on' : ''}" data-go="plan" data-arg="${esc(id)}" ${id === cur ? 'aria-current="page"' : ''}>${esc(t)}<\/button>`).join('')}<\/nav>`;
 function planOverview(P){
   const o = P.overview || {}, bar = t => {
-    if (t.curPct == null) return `<div class="ptrack"><i style="width:0"><\/i><\/div>`;
-    const w = Math.max(2, Math.min(100, t.curPct / (t.tgtPct || 1) * 100)); return `<div class="ptrack"><i style="width:${w}%"><\/i><\/div>`;
+    const reach = `<div class="preach"><span class="pbadge">Expected target reach<\/span><b>${esc(t.target)}<\/b><\/div>`;
+    if (t.curPct == null) return `<div class="ptbar"><div class="ptrack"><i style="width:0"><\/i><\/div><\/div>${reach}`;
+    const w = Math.max(2, Math.min(100, t.curPct / (t.tgtPct || 1) * 100));
+    return `<div class="ptbar"><svg class="tpin ${w > 94 ? 'end' : ''}" style="left:${w}%" viewBox="-9 -22 18 22" width="15" height="19" aria-hidden="true"><path d="M0 -1 C-2 -7 -8 -11 -8 -17 A8 8 0 1 1 8 -17 C8 -11 2 -7 0 -1 Z"/><circle cy="-17" r="3"/><\/svg><div class="ptrack"><i style="width:${w}%"><\/i><\/div><\/div>${reach}`;
   };
   return `<div class="pstats">${(o.stats || []).map(s => `<div class="kpi click" ${planGo(s.go)} title="Open the detail"><div class="l">${esc(s.label)}<\/div><div class="v">${esc(s.value)}<\/div>${s.note ? `<div class="pn">${esc(s.note)}<\/div>` : ''}<\/div>`).join('')}<\/div>
   ${o.headline ? `<p class="sub" style="margin:12px 0 10px;max-width:none">${esc(o.headline)}<\/p>` : ''}
